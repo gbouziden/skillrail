@@ -248,10 +248,69 @@ function cmdCheck(root) {
   process.exit(bad ? 1 : 0);
 }
 
+// ---------- skillrail Team (hosted registry) ----------
+function teamToken() {
+  const t = process.env.SKILLRAIL_TOKEN;
+  if (!t) fail('set SKILLRAIL_TOKEN (get it from your org admin) to use a hosted registry');
+  return t;
+}
+async function api(url, p, method, body) {
+  const res = await fetch(url.replace(/\/$/, '') + p, {
+    method: method || 'GET',
+    headers: { Authorization: `Bearer ${teamToken()}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) fail(`${p}: ${data.error || 'HTTP ' + res.status}`);
+  return data;
+}
+
+async function pullHosted(root, cfg, url, names) {
+  const listing = await api(url, '/v1/skills');
+  const available = listing.skills.map(s => s.name);
+  const want = names.length ? names : available;
+  const lock = loadJSON(path.join(root, LOCK_FILE), { files: {}, installed: {} });
+  for (const n of want) {
+    if (!available.includes(n)) { console.log(`skip ${n} — no approved version (approved: ${available.join(', ') || 'none'})`); continue; }
+    const s = await api(url, `/v1/skills/${n}`);
+    for (const [rel, content] of Object.entries(s.files))
+      writeFile(path.join(root, cfg.source, n, rel), content);
+    lock.installed[n] = { from: url, version: s.version };
+    console.log(`pulled ${n} v${s.version}`);
+  }
+  writeFile(path.join(root, LOCK_FILE), JSON.stringify(lock, null, 2) + '\n');
+  console.log('\nrun "skillrail sync" to distribute to targets');
+}
+
+async function cmdPush(root, names) {
+  const cfg = loadConfig(root);
+  const url = cfg.registry;
+  if (!url || !/^https?:/.test(url)) fail('set "registry" in skillrail.json to your Team server URL (https://…)');
+  const skills = loadSkills(root, cfg).filter(s => !names.length || names.includes(s.name));
+  if (!skills.length) fail('no matching skills to push');
+  for (const s of skills) {
+    const files = {};
+    const walk = (d, rel) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        if (e.isDirectory()) walk(path.join(d, e.name), path.join(rel, e.name));
+        else files[path.join(rel, e.name)] = read(path.join(d, e.name));
+      }
+    };
+    walk(s.dir, '');
+    const r = await api(url, '/v1/skills', 'POST', {
+      name: s.name, version: s.meta.version || '0.0.0', files,
+      description: s.meta.description || '', owner: String(s.meta.owner || ''),
+      pushed_by: process.env.USER || '',
+    });
+    console.log(`pushed ${s.name} v${s.meta.version} → ${r.status} (admin must approve before teams can pull)`);
+  }
+}
+
 function cmdPull(root, url, names) {
   const cfg = loadConfig(root);
   url = url || cfg.registry;
-  if (!url) fail('usage: skillrail pull <git-url> [skill ...]  (or set "registry" in skillrail.json)');
+  if (!url) fail('usage: skillrail pull <git-url|team-registry-url> [skill ...]  (or set "registry" in skillrail.json)');
+  if (/^https?:/.test(url)) return pullHosted(root, cfg, url, names);
   const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'skillrail-'));
   try {
     execFileSync('git', ['clone', '--depth', '1', url, tmp], { stdio: 'pipe' });
@@ -277,7 +336,8 @@ function cmdList(root) {
   const cfg = loadConfig(root);
   const lock = loadJSON(path.join(root, LOCK_FILE), { installed: {} });
   for (const s of loadSkills(root, cfg)) {
-    const origin = lock.installed[s.name] ? ` [from ${lock.installed[s.name].from} @ ${lock.installed[s.name].commit}]` : '';
+    const inst = lock.installed[s.name];
+    const origin = inst ? ` [from ${inst.from} @ ${inst.commit || 'v' + inst.version}]` : '';
     console.log(`${s.name}  v${s.meta.version || '?'}  owner=${s.meta.owner || '?'}  targets=${skillTargets(s, cfg).join(',')}${origin}`);
   }
 }
@@ -292,6 +352,7 @@ const commands = {
   status: () => cmdStatus(root),
   check: () => cmdCheck(root),
   pull: () => cmdPull(root, args[0], args.slice(1)),
+  push: () => cmdPush(root, args),
   list: () => cmdList(root),
 };
 if (!commands[cmd]) {
@@ -303,10 +364,12 @@ usage:
   skillrail sync [--dry]            compile skills to all targets (.claude, .cursor, .github, AGENTS.md, ...)
   skillrail status                  show stale / drifted / missing targets (exit 2 if dirty — CI-friendly)
   skillrail check                   lint skills: description, owner, semver, size (exit 1 on fail)
-  skillrail pull [git-url] [name…]  install skills from a git registry repo
+  skillrail pull [url] [name…]      install skills from a git repo or Team registry (https url)
+  skillrail push [name…]            push skills to your Team registry for approval (needs SKILLRAIL_TOKEN)
   skillrail list                    list skills with version, owner, origin
 
-targets: claude, cursor, copilot, windsurf, agentsmd`);
+targets: claude, cursor, copilot, windsurf, agentsmd
+hosted registry (approvals + usage telemetry): github.com/gbouziden/skillrail#team`);
   process.exit(cmd ? 1 : 0);
 }
-commands[cmd]();
+Promise.resolve(commands[cmd]()).catch(e => fail(e.message));
