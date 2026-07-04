@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skillrail — one skill source, every agent surface</title>
+<meta name="description" content="Stop rewriting agent instructions five times. skillrail compiles one versioned skill source to Claude Code, Cursor, Copilot, Windsurf, and AGENTS.md — with owners, drift detection, and CI gates.">
+<style>
+:root{--bg:#0b0e14;--panel:#131824;--ink:#e8ecf4;--dim:#93a0b4;--acc:#4fd1a5;--acc2:#7aa2ff;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px}
+header{padding:72px 0 40px;text-align:center}
+h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.15;letter-spacing:-.02em}
+h1 em{color:var(--acc);font-style:normal}
+.sub{color:var(--dim);font-size:1.15rem;max-width:620px;margin:18px auto 0}
+.cta{display:flex;gap:12px;justify-content:center;margin-top:28px;flex-wrap:wrap}
+.btn{padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600}
+.btn.p{background:var(--acc);color:#08130f}
+.btn.s{border:1px solid #2a3245;color:var(--ink)}
+.install{font-family:var(--mono);background:var(--panel);border:1px solid #232b3d;border-radius:8px;display:inline-block;padding:10px 18px;margin-top:22px;color:var(--acc2)}
+section{padding:44px 0;border-top:1px solid #1a2131}
+h2{font-size:1.5rem;margin-bottom:14px;letter-spacing:-.01em}
+p{color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:22px}
+.card{background:var(--panel);border:1px solid #232b3d;border-radius:10px;padding:18px}
+.card b{color:var(--ink)}
+pre{background:var(--panel);border:1px solid #232b3d;border-radius:10px;padding:18px;overflow-x:auto;font-family:var(--mono);font-size:.86rem;line-height:1.55;margin-top:18px;color:#c8d2e4}
+pre .c{color:#5b6b84}.g{color:var(--acc)}.b{color:var(--acc2)}.r{color:#ff8f8f}
+blockquote{border-left:3px solid var(--acc);padding:8px 16px;margin-top:18px;color:var(--dim);font-style:italic;background:var(--panel);border-radius:0 8px 8px 0}
+blockquote cite{display:block;margin-top:8px;font-style:normal;font-size:.85rem}
+table{width:100%;border-collapse:collapse;margin-top:18px;font-size:.92rem}
+td,th{padding:9px 12px;border-bottom:1px solid #1e2637;text-align:left}
+th{color:var(--ink)}td{color:var(--dim)}td code{font-family:var(--mono);color:var(--acc2)}
+footer{padding:44px 0 60px;text-align:center;color:var(--dim);font-size:.9rem;border-top:1px solid #1a2131}
+a{color:var(--acc2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>One skill source.<br><em>Every agent surface.</em></h1>
+  <p class="sub">Your teams rewrite the same AI agent instructions five times — Claude skill, Cursor rule, Copilot instructions, Windsurf rule, AGENTS.md. They drift by Tuesday. skillrail gives skills a single versioned home and compiles them everywhere.</p>
+  <div class="cta">
+    <a class="btn p" href="https://github.com/gbouziden/skillrail">Get it on GitHub</a>
+    <a class="btn s" href="mailto:george.bouziden@gmail.com?subject=skillrail%20Team%20waitlist">Join the Team waitlist</a>
+  </div>
+  <div class="install">npm i -g skillrail</div>
+</header>
+
+<section>
+  <h2>The vendors told you to build this yourself</h2>
+  <blockquote>"Custom Skills do not sync across surfaces… implement your own synchronization process." <br>"Maintain an internal registry for each Skill with: Purpose… Owner… Version… Evaluation status."
+    <cite>— Anthropic, Agent Skills enterprise documentation</cite>
+  </blockquote>
+  <p style="margin-top:14px">Every agent vendor ships its own silo format and no cross-tool story. skillrail is the missing registry and sync layer — open source, zero dependencies, works with the formats you already have.</p>
+</section>
+
+<section>
+  <h2>Write once, rail everywhere</h2>
+<pre>
+<span class="c"># skills/deploy-checklist/SKILL.md — open Anthropic format + org metadata</span>
+---
+name: deploy-checklist
+description: Follow the org deploy checklist before shipping to production.
+version: 2.1.0
+owner: platform-team
+targets: all
+---
+
+$ <span class="g">skillrail sync</span>
+create .claude/skills/deploy-checklist/SKILL.md
+create .cursor/rules/deploy-checklist.mdc
+create .github/instructions/deploy-checklist.instructions.md
+update AGENTS.md <span class="c">(managed block)</span>
+
+$ <span class="g">skillrail status</span>
+<span class="r">drifted</span>  .cursor/rules/deploy-checklist.mdc — edited in place; port changes to the canonical skill
+</pre>
+</section>
+
+<section>
+  <h2>Built for orgs, not just repos</h2>
+  <div class="grid">
+    <div class="card"><b>Git-repo registries</b><p>Platform team publishes one skills repo; every team <code style="font-family:var(--mono)">pull</code>s from it, commit-pinned in a lockfile.</p></div>
+    <div class="card"><b>Owners &amp; versions</b><p>Every skill carries an owner and semver. <b>skillrail check</b> fails CI when governance fields are missing.</p></div>
+    <div class="card"><b>Drift detection</b><p><b>skillrail status</b> catches hand-edited generated files before a sync silently overwrites someone's work. Exit codes wired for CI.</p></div>
+    <div class="card"><b>Zero lock-in</b><p>Canonical format is Anthropic's open SKILL.md. Outputs are the plain files each tool already reads. Delete skillrail anytime; your files stay.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Targets</h2>
+  <table>
+    <tr><th>Surface</th><th>Output</th></tr>
+    <tr><td>Claude Code</td><td><code>.claude/skills/&lt;name&gt;/</code> (verbatim, supporting files included)</td></tr>
+    <tr><td>Cursor</td><td><code>.cursor/rules/&lt;name&gt;.mdc</code></td></tr>
+    <tr><td>GitHub Copilot</td><td><code>.github/instructions/&lt;name&gt;.instructions.md</code></td></tr>
+    <tr><td>Windsurf</td><td><code>.windsurf/rules/&lt;name&gt;.md</code></td></tr>
+    <tr><td>Codex / Jules / Amp…</td><td>managed block in <code>AGENTS.md</code></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Coming: skillrail Team</h2>
+  <p>The CLI is MIT forever. The hosted layer adds what platform teams pay for: a private registry with review &amp; approval on skill versions, usage telemetry (which skills agents actually invoke — kill dead ones with data), push to Anthropic API / claude.ai surfaces, and a pre-promotion eval harness.</p>
+  <div class="cta" style="justify-content:flex-start"><a class="btn p" href="mailto:george.bouziden@gmail.com?subject=skillrail%20Team%20waitlist&body=Team%20size%3A%0AAgent%20tools%20we%20use%3A">Get early access</a></div>
+</section>
+
+<footer>MIT licensed · built by a platform engineer who got tired of pasting the same rules into five tools · <a href="https://github.com/gbouziden/skillrail">github.com/gbouziden/skillrail</a></footer>
+</div>
+</body>
+</html>
