@@ -19,5 +19,8 @@
     "copilot",
     "sync",
     "registry"
+  ],
+  "files": [
+    "cli.js"
   ]
 }
