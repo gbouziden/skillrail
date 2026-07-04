@@ -2,9 +2,22 @@
   "name": "skillrail",
   "version": "0.1.0",
   "description": "One canonical skill source, compiled and synced to every AI agent surface your org uses — Claude Code, Cursor, GitHub Copilot, Windsurf, AGENTS.md.",
-  "bin": { "skillrail": "./cli.js" },
+  "bin": {
+    "skillrail": "cli.js"
+  },
   "type": "commonjs",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "license": "MIT",
-  "keywords": ["ai", "agents", "skills", "claude", "cursor", "copilot", "sync", "registry"]
+  "keywords": [
+    "ai",
+    "agents",
+    "skills",
+    "claude",
+    "cursor",
+    "copilot",
+    "sync",
+    "registry"
+  ]
 }
