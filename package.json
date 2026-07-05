@@ -1,6 +1,6 @@
 {
   "name": "skillrail",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "One canonical skill source, compiled and synced to every AI agent surface your org uses — Claude Code, Cursor, GitHub Copilot, Windsurf, AGENTS.md.",
   "bin": {
     "skillrail": "cli.js"

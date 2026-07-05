@@ -273,8 +273,13 @@ async function pullHosted(root, cfg, url, names) {
   for (const n of want) {
     if (!available.includes(n)) { console.log(`skip ${n} — no approved version (approved: ${available.join(', ') || 'none'})`); continue; }
     const s = await api(url, `/v1/skills/${n}`);
-    for (const [rel, content] of Object.entries(s.files))
-      writeFile(path.join(root, cfg.source, n, rel), content);
+    for (const [rel, content] of Object.entries(s.files)) {
+      const safe = path.normalize(rel);
+      if (path.isAbsolute(safe) || safe.split(path.sep).includes('..')) {
+        console.log(`  refused unsafe path from registry: ${rel}`); continue;
+      }
+      writeFile(path.join(root, cfg.source, n, safe), content);
+    }
     lock.installed[n] = { from: url, version: s.version };
     console.log(`pulled ${n} v${s.version}`);
   }
