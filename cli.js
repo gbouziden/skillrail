@@ -175,7 +175,7 @@ function cmdSync(root, dry) {
     const block = agentsmdBlock(agentsSkills);
     let content = exists(abs) ? read(abs) : '# Agent instructions\n\n';
     content = content.includes(BEGIN_MARK)
-      ? content.replace(new RegExp(`${BEGIN_MARK}[\\s\\S]*?${END_MARK}`), block)
+      ? content.replace(new RegExp(`${BEGIN_MARK}[\\s\\S]*?${END_MARK}`), () => block)
       : content.trimEnd() + '\n\n' + block + '\n';
     if ((exists(abs) ? read(abs) : null) !== content) {
       if (!dry) writeFile(abs, content);
@@ -255,6 +255,9 @@ function teamToken() {
   return t;
 }
 async function api(url, p, method, body) {
+  const host = new URL(url).hostname;
+  if (!url.startsWith('https:') && host !== 'localhost' && host !== '127.0.0.1' && !process.env.SKILLRAIL_ALLOW_HTTP)
+    fail('registry must use https (tokens travel with every request); set SKILLRAIL_ALLOW_HTTP=1 only for testing');
   const res = await fetch(url.replace(/\/$/, '') + p, {
     method: method || 'GET',
     headers: { Authorization: `Bearer ${teamToken()}`, 'Content-Type': 'application/json' },
@@ -318,7 +321,8 @@ function cmdPull(root, url, names) {
   if (/^https?:/.test(url)) return pullHosted(root, cfg, url, names);
   const tmp = fs.mkdtempSync(path.join(require('os').tmpdir(), 'skillrail-'));
   try {
-    execFileSync('git', ['clone', '--depth', '1', url, tmp], { stdio: 'pipe' });
+    if (url.startsWith('-')) fail('invalid registry url');
+    execFileSync('git', ['clone', '--depth', '1', '--', url, tmp], { stdio: 'pipe' });
     const head = execFileSync('git', ['-C', tmp, 'rev-parse', '--short', 'HEAD']).toString().trim();
     // registry layout: skills/<name>/SKILL.md at repo root (or bare <name>/SKILL.md)
     const regSrc = exists(path.join(tmp, 'skills')) ? path.join(tmp, 'skills') : tmp;
